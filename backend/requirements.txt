@@ -1,0 +1,26 @@
+# Core
+fastapi>=0.115.0,<0.116
+uvicorn[standard]>=0.32.0,<0.33
+
+# Database
+sqlalchemy[asyncio]>=2.0.36,<2.1
+asyncpg>=0.30.0,<0.31
+psycopg[binary]>=3.2.0,<3.3
+alembic>=1.14.0,<1.15
+
+# Auth
+python-jose[cryptography]>=3.3.0
+httpx>=0.28.0,<0.29
+
+# Validation / utils
+pydantic>=2.10.0,<2.11
+pydantic-settings>=2.6.0,<2.7
+email-validator>=2.2.0
+
+# Redis (optional)
+redis>=5.2.0,<5.3
+
+# Dev (optional)
+pytest>=8.3.0
+pytest-asyncio>=0.24.0
+httpx>=0.28.0
