@@ -36,5 +36,9 @@ class OrderRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class OrderList(BaseModel):
+    orders: list[OrderRead]
+
+
 class OrderStatusUpdate(BaseModel):
     status: str = Field(..., pattern="^(confirmed|preparing|ready|delivered|cancelled)$")

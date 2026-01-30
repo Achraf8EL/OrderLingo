@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload
 from app.api.deps import get_restaurant_or_404, require_restaurant_staff
 from app.core.security import CurrentUser
 from app.models.order import Order
-from app.schemas.order import OrderCreate, OrderRead, OrderStatusUpdate
+from app.schemas.order import OrderCreate, OrderList, OrderRead, OrderStatusUpdate
 from app.services.ordering import create_order, update_order_status
 
 router = APIRouter(prefix="/restaurants/{restaurant_id}/orders", tags=["orders"])
@@ -29,6 +29,25 @@ async def _get_order_or_404(
     if not o:
         raise HTTPException(status_code=404, detail="Order not found")
     return o
+
+
+@router.get("", response_model=OrderList)
+async def list_orders(
+    restaurant_id: UUID,
+    db_user: Annotated[
+        tuple[AsyncSession, CurrentUser], Depends(require_restaurant_staff)
+    ],
+) -> dict:
+    db, _ = db_user
+    await get_restaurant_or_404(restaurant_id, db)
+    r = await db.execute(
+        select(Order)
+        .where(Order.restaurant_id == restaurant_id)
+        .options(selectinload(Order.items))
+        .order_by(Order.id.desc())
+    )
+    orders = list(r.scalars().all())
+    return {"orders": orders}
 
 
 @router.post("", response_model=OrderRead, status_code=status.HTTP_201_CREATED)

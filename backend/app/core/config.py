@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     keycloak_issuer: str = "http://localhost:8081/realms/food"
     keycloak_audience: str = "food-api"
     keycloak_jwks_uri: str = "http://localhost:8081/realms/food/protocol/openid-connect/certs"
+    keycloak_admin_url: str = "http://localhost:8081"  # For Keycloak Admin API (overridden in Docker)
 
     # Redis
     redis_url: str = "redis://localhost:6379/0"

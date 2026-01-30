@@ -1,10 +1,12 @@
 from contextlib import asynccontextmanager
+from typing import Annotated
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import inventory, menu, orders, restaurants
+from app.api.routes import inventory, menu, orders, restaurants, users
 from app.core.config import settings
+from app.core.security import CurrentUser, get_current_user
 
 
 @asynccontextmanager
@@ -34,6 +36,7 @@ app.include_router(restaurants.router)
 app.include_router(menu.router)
 app.include_router(inventory.router)
 app.include_router(orders.router)
+app.include_router(users.router)
 
 
 @app.get("/")
@@ -49,3 +52,14 @@ async def root():
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/debug/token")
+async def debug_token(user: Annotated[CurrentUser, Depends(get_current_user)]):
+    """Debug endpoint to inspect token payload."""
+    return {
+        "sub": user.sub,
+        "username": user.preferred_username,
+        "email": user.email,
+        "roles": user.roles,
+    }

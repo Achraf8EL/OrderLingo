@@ -21,8 +21,14 @@ class Restaurant(Base):
     users: Mapped[list["RestaurantUser"]] = relationship(
         "RestaurantUser", back_populates="restaurant", cascade="all, delete-orphan"
     )
+    menu_categories: Mapped[list["MenuCategory"]] = relationship(
+        "MenuCategory", back_populates="restaurant", cascade="all, delete-orphan"
+    )
     menu_items: Mapped[list["MenuItem"]] = relationship(
         "MenuItem", back_populates="restaurant", cascade="all, delete-orphan"
+    )
+    option_groups: Mapped[list["OptionGroup"]] = relationship(
+        "OptionGroup", back_populates="restaurant", cascade="all, delete-orphan"
     )
     inventory_items: Mapped[list["InventoryItem"]] = relationship(
         "InventoryItem", back_populates="restaurant", cascade="all, delete-orphan"

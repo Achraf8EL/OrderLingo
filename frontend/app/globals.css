@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --cream: #faf7f2;
+    --sand: #e8e2d8;
+    --terracotta: #c17f59;
+    --terracotta-dark: #a04d2e;
+    --terracotta-light: #e4b8a0;
+    --sage: #6b7c5c;
+    --sage-dark: #4a5d3d;
+    --ink: #2c2416;
+    --muted: #6b6560;
+  }
+  body {
+    @apply bg-cream text-ink antialiased;
+  }
+}

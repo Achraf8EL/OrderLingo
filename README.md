@@ -13,9 +13,8 @@ curl -s http://localhost:8000/health
 # => {"status":"ok"}
 # OpenAPI : http://localhost:8000/docs
 
-# 3. Configurer Keycloak (realm `food`, client `food-api`, rôles) — voir section E.
-# 4. Exécuter les migrations (automatiques au démarrage de l’API) ou manuellement :
-#    docker compose exec api python -m alembic upgrade head
+# 3. Keycloak : realm `food`, client `food-api`, rôles et users de démo sont créés au premier démarrage (seed). Voir section E.
+# 4. Migrations : appliquées au démarrage de l’API. Sinon : docker compose exec api python -m alembic upgrade head
 ```
 
 ## Stack
@@ -87,19 +86,40 @@ En Docker, exécuter les migrations dans le conteneur API ou via un job dédié 
 
 ## E) Auth Keycloak — realm, client, rôles, vérification JWT
 
-### 1. Créer le realm `food`
+### 0. Seed automatique (recommandé)
+
+Au démarrage, le script `scripts/keycloak-seed-food.sh` crée :
+
+- Realm **`food`** (`sslRequired=NONE` pour HTTP en dev)
+- Client **`food-api`** (confidentiel, Direct Access Grants, secret `food-api-dev-secret`)
+- Rôles realm : `platform_admin`, `restaurant_manager`, `staff`
+- Users de démo :
+
+| Username    | Mot de passe | Rôle                |
+|------------|--------------|---------------------|
+| `admin-food` | `admin123`   | `platform_admin`    |
+| `manager1`   | `manager123` | `restaurant_manager`|
+| `staff1`     | `staff123`   | `staff`             |
+
+**Frontend** : dans `frontend/.env.local`, mets `KEYCLOAK_CLIENT_SECRET=food-api-dev-secret`.  
+Tu peux te connecter avec `admin-food` / `admin123` (ou les autres) sur le login.
+
+Les données Keycloak sont persistées via le volume `keycloak_data` ; le seed est idempotent.
+
+### 1. Créer le realm `food` (si pas de seed)
 
 1. Admin Console : http://localhost:8081 (user `admin` / `admin`).
 2. Créer un realm `food`.
 
-### 2. Client `food-api`
+### 2. Client `food-api` (si pas de seed)
 
 1. Dans `food` : **Clients** → **Create**.
 2. **Client ID** : `food-api`.
 3. **Client authentication** : ON.
 4. **Access type** : `confidential` (ou `bearer-only` si l’API ne fait que vérifier les tokens).
-5. **Valid redirect URIs** : selon ton front (ex. `http://localhost:3000/*` pour Next.js).
-6. **Web origins** : idem si besoin.
+5. **Valid redirect URIs** : ex. `http://localhost:3000/*` pour Next.js.
+6. **Web origins** : idem. **Direct access grants** : ON pour le login username/password.
+7. **Credentials** → secret : note-le et mets-le dans `KEYCLOAK_CLIENT_SECRET` (frontend).
 
 ### 3. Audience et roles
 
@@ -204,6 +224,37 @@ Statuts possibles : `draft` → `confirmed` → `preparing` → `ready` → `del
 
 ---
 
+## Frontend (Admin UI)
+
+Next.js 14 (App Router), TypeScript, Tailwind, composants type shadcn (Radix). Thème **terracotta / sage / cream**.
+
+### Lancer le frontend
+
+```bash
+cd frontend
+cp .env.example .env.local
+# Éditer .env.local : KEYCLOAK_CLIENT_SECRET = secret du client food-api (Keycloak → Clients → food-api → Credentials)
+npm install
+npm run dev
+```
+
+Ouvre **http://localhost:3000**. Redirection vers `/login`. Connexion via **username / password** (Direct Access Grant) ; le token est envoyé à l’API.
+
+### Pages
+
+- **Login** : `/login`
+- **Dashboard** : `/dashboard` (raccourcis)
+- **Restaurants** : `/dashboard/restaurants` (liste, création)
+- **Détail restaurant** : `/dashboard/restaurants/[id]` — onglets **Infos**, **Menu**, **Stock**, **Disponibilité**, **Commandes**
+
+### Variables d’environnement (.env.local)
+
+- `NEXT_PUBLIC_API_URL` : URL de l’API (défaut `http://localhost:8000`)
+- `NEXT_PUBLIC_KEYCLOAK_URL` : URL Keycloak (défaut `http://localhost:8081`)
+- `KEYCLOAK_CLIENT_SECRET` : secret du client `food-api` (serveur uniquement, pour `/api/auth/login`)
+
+---
+
 ## G) Bonnes pratiques
 
 - **Multi-tenant** : une seule DB, `restaurant_id` partout ; jamais de données d’un autre restaurant.
@@ -219,7 +270,7 @@ Statuts possibles : `draft` → `confirmed` → `preparing` → `ready` → `del
 | Phase | Contenu |
 |-------|--------|
 | **MVP** | Monolithe modulaire : CRUD restaurants, menu, stock/availability, commandes, auth Keycloak, Docker Compose. |
-| **V1** | Webhooks (ex. `order_ready`), notifications, admin UI (Next.js + shadcn ou MUI). |
+| **V1** | Webhooks (ex. `order_ready`), notifications. Admin UI : Next.js + shadcn (**fait**). |
 | **V2** | IA vocale : LLM + STT/TTS, appels téléphoniques, extraction de commandes en JSON → appels API. |
 
 ---
@@ -237,7 +288,9 @@ Statuts possibles : `draft` → `confirmed` → `preparing` → `ready` → `del
 | PATCH | `/restaurants/{id}/menu/items/{item_id}` | manager |
 | DELETE | `/restaurants/{id}/menu/items/{item_id}` | manager |
 | GET | `/restaurants/{id}/availability` | staff / manager |
+| GET | `/restaurants/{id}/inventory/items` | staff / manager |
 | POST | `/restaurants/{id}/orders` | staff / manager |
+| GET | `/restaurants/{id}/orders` | staff / manager |
 | GET | `/restaurants/{id}/orders/{order_id}` | staff / manager |
 | PATCH | `/restaurants/{id}/orders/{order_id}/status` | staff / manager |
 

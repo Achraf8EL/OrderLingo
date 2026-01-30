@@ -34,6 +34,7 @@ class RestaurantUpdate(BaseModel):
     description: str | None = Field(None, max_length=1024)
     is_active: bool | None = None
     manager_user_ids: list[str] | None = None
+    staff_user_ids: list[str] | None = None
 
     @model_validator(mode="after")
     def normalize_slug(self):

@@ -24,5 +24,8 @@ for i in 1 2 3 4 5 6 7 8; do
 done
 "$KEYCLOAK_HOME/bin/kcadm.sh" update realms/master -s sslRequired=NONE 2>/dev/null || true
 
-echo "Keycloak ready. Master realm allows HTTP."
+echo "Seeding realm food, client food-api, roles, demo users..."
+bash /scripts/keycloak-seed-food.sh || true
+
+echo "Keycloak ready. Master + food allow HTTP."
 wait $PID

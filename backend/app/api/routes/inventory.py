@@ -37,6 +37,24 @@ async def _get_inventory_item_or_404(
     return m
 
 
+@router.get("/inventory/items")
+async def list_inventory_items(
+    restaurant_id: UUID,
+    db_user: Annotated[
+        tuple[AsyncSession, CurrentUser], Depends(require_restaurant_staff)
+    ],
+) -> list:
+    db, _ = db_user
+    await get_restaurant_or_404(restaurant_id, db)
+    r = await db.execute(
+        select(InventoryItem)
+        .where(InventoryItem.restaurant_id == restaurant_id)
+        .options(selectinload(InventoryItem.levels))
+    )
+    items = list(r.scalars().all())
+    return [InventoryItemRead.model_validate(i) for i in items]
+
+
 @router.post(
     "/inventory/items",
     response_model=InventoryItemRead,

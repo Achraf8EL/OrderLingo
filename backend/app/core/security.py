@@ -86,33 +86,43 @@ async def _decode_token(token: str) -> TokenPayload:
         )
     key = jwk.construct(jwk_dict)
 
+    options = {"verify_aud": True, "verify_exp": True}
+    audience = settings.keycloak_audience
+    if settings.environment == "development":
+        options = {"verify_aud": False, "verify_exp": False}
+        audience = None
+
     try:
         payload = jwt.decode(
             token,
             key,
             algorithms=[algo],
-            audience=settings.keycloak_audience,
-            options={"verify_aud": True},
-        )
-        issuer = payload.get("iss")
-        if issuer and issuer.rstrip("/") != settings.keycloak_issuer.rstrip("/"):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid issuer",
-            )
-        return TokenPayload(
-            sub=payload.get("sub", ""),
-            realm_access=payload.get("realm_access"),
-            resource_access=payload.get("resource_access"),
-            scope=payload.get("scope"),
-            preferred_username=payload.get("preferred_username"),
-            email=payload.get("email"),
+            audience=audience,
+            options=options,
         )
     except JWTError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
+            detail=f"Invalid or expired token: {str(e)}",
         ) from e
+
+    issuer = payload.get("iss")
+    expected_issuer = settings.keycloak_issuer.rstrip("/")
+    actual_issuer = (issuer or "").rstrip("/")
+    if actual_issuer and actual_issuer != expected_issuer:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid issuer (expected {expected_issuer!r}, got {actual_issuer!r})",
+        )
+
+    return TokenPayload(
+        sub=payload.get("sub", ""),
+        realm_access=payload.get("realm_access"),
+        resource_access=payload.get("resource_access"),
+        scope=payload.get("scope"),
+        preferred_username=payload.get("preferred_username"),
+        email=payload.get("email"),
+    )
 
 
 class CurrentUser(BaseModel):
